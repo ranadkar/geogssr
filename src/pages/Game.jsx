@@ -87,13 +87,7 @@ const Game = () => {
         // Store the guessed location in state
         setGuessLocation(latLng);
         setHasGuessed(true); // Enable the submit button once the user has made a guess
-
-        console.log(`Marker moved to: Latitude: ${latLng.lat()}, Longitude: ${latLng.lng()}`);
-
-        // Calculate and log the distance between the original location and the guess
-        if (actualLocation) {
-          const distance = window.google.maps.geometry.spherical.computeDistanceBetween(actualLocation, latLng);
-        }
+        
       });
     }
   }, [guessMarker, actualLocation]);

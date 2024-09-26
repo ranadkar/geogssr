@@ -1,5 +1,9 @@
 /* Game.css */
 
+html, body {
+  overflow: hidden;
+}
+
 .street-view-container {
   position: fixed;
   top: 0;
