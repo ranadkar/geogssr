@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
-import './Game.css';
-import locations from './world.js';
+import React, { useEffect, useRef, useState } from "react";
+import "./Game.css";
+import locations from "./one.js";
 
 const Game = () => {
   const streetViewRef = useRef(null);
@@ -8,6 +8,8 @@ const Game = () => {
   const fullScreenMapRef = useRef(null);
   const panoRef = useRef(null);
   const compassRef = useRef(null);
+  const [panoId, setPanoId] = useState(null);
+  const [locationStr, setLocationStr] = useState(null);
   const [actualLocation, setActualLocation] = useState(null); // Store the original location
   const [guessLocation, setGuessLocation] = useState(null); // Store the guessed location
   const [guessMarker, setGuessMarker] = useState(null); // Guess marker
@@ -21,16 +23,17 @@ const Game = () => {
   const displayStreetViewLocation = () => {
     const location = locations[Math.floor(Math.random() * locations.length)]; // Random location from the list
     const coords = { lat: location.lat, lng: location.lng };
-    const pov = { heading: location.heading, pitch: location.pitch };
-    const zoom = location.zoom;
 
-    setActualLocation(coords); // Save the original location
+    // Set the chosen random location for Street View
+    setActualLocation(coords);
+    setPanoId(location.panoId);
+
+    // Initialize the Street View panorama using the panoId
     const panorama = new window.google.maps.StreetViewPanorama(
       streetViewRef.current,
       {
+        pano: location.panoId,
         position: coords,
-        pov: pov,
-        zoom: zoom,
         disableDefaultUI: true,
         showRoadLabels: false,
       }
@@ -42,10 +45,10 @@ const Game = () => {
       center: { lat: 33, lng: 20 }, // Approximate center of the world map
       zoom: 1,
       scrollwheel: true, // Scroll zoom without Ctrl
-      gestureHandling: 'auto', // The usual stuff
+      gestureHandling: "auto", // The usual stuff
       disableDefaultUI: true,
-      draggableCursor: 'crosshair',
-      draggingCursor: 'crosshair',
+      draggableCursor: "crosshair",
+      draggingCursor: "crosshair",
     });
 
     // Hidden marker, shown only when the user makes a guess
@@ -54,12 +57,43 @@ const Game = () => {
     });
 
     setGuessMarker(marker);
+
+    // Reverse geocoding using OpenStreetMap's Nominatim API directly
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${location.lat}&lon=${location.lng}`;
+
+    fetch(url)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        const country = data.address?.country;
+        const localDescriptor =
+          data.address?.city ||
+          data.address?.town ||
+          data.address?.village ||
+          data.address?.state ||
+          data.address?.province ||
+          data.address?.county;
+
+        const locationLevels = [];
+        if (localDescriptor) locationLevels.push(localDescriptor);
+        if (country) locationLevels.push(country);
+        const locationString = locationLevels.join(", ");
+        setLocationStr(locationString);
+        // console.log(locationString);
+      })
+      .catch((error) => {
+        console.error("Geocoder failed due to:", error);
+      });
   };
 
   // Compass
   useEffect(() => {
     if (panoRef.current) {
-      panoRef.current.addListener('pov_changed', () => {
+      panoRef.current.addListener("pov_changed", () => {
         const heading = panoRef.current.getPov().heading; // Get the current heading
         if (compassRef.current) {
           compassRef.current.style.transform = `rotate(${-heading}deg)`; // Rotate the compass element
@@ -68,17 +102,25 @@ const Game = () => {
     }
   }, [streetViewRef, panoRef.current]);
 
-
   useEffect(() => {
     if (locations !== null && !isSubmitted) {
       displayStreetViewLocation();
     }
+    const removeUnwantedElements = () => {
+      const unwantedElements = document.querySelectorAll(
+        'div[style*="position: absolute; left: 0px; bottom: 0px;"]'
+      );
+      unwantedElements.forEach((element) => {
+        element.remove();
+      });
+    };
+    setTimeout(removeUnwantedElements, 500);
   }, [locations, isSubmitted]);
 
   // Stuff to do when the user makes a guess
   useEffect(() => {
     if (guessMarker && mapRef.current) {
-      guessMarker.getMap().addListener('click', (event) => {
+      guessMarker.getMap().addListener("click", (event) => {
         const { latLng } = event;
 
         // Move the marker to the new clicked location
@@ -87,7 +129,6 @@ const Game = () => {
         // Store the guessed location in state
         setGuessLocation(latLng);
         setHasGuessed(true); // Enable the submit button once the user has made a guess
-        
       });
     }
   }, [guessMarker, actualLocation]);
@@ -100,11 +141,14 @@ const Game = () => {
         bounds.extend(actualLocation);
         bounds.extend(guessLocation);
 
-        const fullScreenMap = new window.google.maps.Map(fullScreenMapRef.current, {
-          center: actualLocation,
-          zoom: 8,
-          disableDefaultUI: true,
-        });
+        const fullScreenMap = new window.google.maps.Map(
+          fullScreenMapRef.current,
+          {
+            center: actualLocation,
+            zoom: 8,
+            disableDefaultUI: true,
+          }
+        );
 
         fullScreenMap.fitBounds(bounds);
 
@@ -138,51 +182,36 @@ const Game = () => {
           path: [actualLocation, guessLocation],
           strokeColor: "#000000",
           strokeOpacity: 0,
-          icons: [{
-            icon: {
-              path: 'M 0,-1 0,1',
-              strokeOpacity: 1,
-              scale: 2,
+          icons: [
+            {
+              icon: {
+                path: "M 0,-1 0,1",
+                strokeOpacity: 1,
+                scale: 2,
+              },
+              offset: "0",
+              repeat: "10px",
             },
-            offset: '0',
-            repeat: '10px'
-          }],
+          ],
           map: fullScreenMap,
         });
 
         // Calculate distance between the guess and actual location
-        const calculatedDistance = window.google.maps.geometry.spherical.computeDistanceBetween(actualLocation, guessLocation);
+        const calculatedDistance =
+          window.google.maps.geometry.spherical.computeDistanceBetween(
+            actualLocation,
+            guessLocation
+          );
         setDistance((calculatedDistance / 1000).toFixed(2)); // Kilometers RAHHHH
 
         // Goofy scoring system
-        const calculatedScore = Math.round(5000 * Math.pow(0.999, calculatedDistance / 1000));
+        const calculatedScore = Math.round(
+          5000 * Math.pow(0.999, calculatedDistance / 1000)
+        );
         setScore(calculatedScore);
       }
     }
   }, [isSubmitted, actualLocation, guessLocation]);
-
-  // // Get rid of google overlays
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     // Locate and remove the first error message container
-  //     const googleMapsErrorSpan = document.querySelector("span[style='color: rgba(0, 0, 0, 0.87); font-size: 14px;']");
-  //     if (googleMapsErrorSpan && googleMapsErrorSpan.textContent === "This page can't load Google Maps correctly.") {
-  //       const errorContainer = googleMapsErrorSpan.closest("div[style*='position: absolute']");
-  //       if (errorContainer) {
-  //         errorContainer.remove();
-  //       }
-  //     }
-
-  //     // Locate and remove the "For development purposes only" overlay
-  //     const developmentOverlay = document.querySelector("div[style*='position: absolute'][style*='top: 50%'][style*='left: 50%']");
-  //     if (developmentOverlay && developmentOverlay.textContent.includes("For development purposes only")) {
-  //       developmentOverlay.remove();
-  //     }
-
-  //   }, 100);
-
-  //   return () => clearInterval(interval);
-  // }, []);
 
   // Reset the game and find a new Street View location
   const handleReset = () => {
@@ -190,6 +219,7 @@ const Game = () => {
     setGuessLocation(null);
     setHasGuessed(false);
     setIsHovered(false);
+    setLocationStr(null);
   };
 
   const handleMouseEnter = () => {
@@ -213,7 +243,7 @@ const Game = () => {
   // Handle spacebar press to do stuff
   useEffect(() => {
     const handleKeyDown = (event) => {
-      if (event.code === 'Space') {
+      if (event.code === "Space") {
         event.preventDefault(); // Prevent default spacebar behavior (scrolling)
 
         if (isSubmitted) {
@@ -224,30 +254,36 @@ const Game = () => {
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown); // Cleanup on unmount
+      window.removeEventListener("keydown", handleKeyDown); // Cleanup on unmount
     };
   }, [hasGuessed, isSubmitted, setSubmitted, handleReset]);
 
   return (
     <div>
-      {!isSubmitted && <div ref={streetViewRef} className="street-view-container"></div>}
+      {!isSubmitted && (
+        <div ref={streetViewRef} className="street-view-container"></div>
+      )}
 
       {!isSubmitted && <div ref={compassRef} className="custom-compass"></div>}
 
       {!isSubmitted && (
         <div
           ref={mapRef}
-          className={`map-container ${isHovered ? 'expanded' : ''}`}
+          className={`map-container ${isHovered ? "expanded" : ""}`}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         ></div>
       )}
 
       {!isSubmitted && (
-        <button onClick={() => setSubmitted(true)} className="submit-button" disabled={!hasGuessed}>
+        <button
+          onClick={() => setSubmitted(true)}
+          className="submit-button"
+          disabled={!hasGuessed}
+        >
           Submit
         </button>
       )}
@@ -266,6 +302,13 @@ const Game = () => {
         <div className="results">
           <p>Distance: {distance} km</p>
           <p>Score: {score}</p>
+          <a
+            href={`https://www.google.com/maps/@?api=1&map_action=pano&pano=${panoId}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {locationStr}
+          </a>
         </div>
       )}
     </div>
