@@ -184,28 +184,28 @@ const Game = () => {
     }
   }, [isSubmitted, actualLocation, guessLocation]);
 
-  // Get rid of google overlays
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // Locate and remove the first error message container
-      const googleMapsErrorSpan = document.querySelector("span[style='color: rgba(0, 0, 0, 0.87); font-size: 14px;']");
-      if (googleMapsErrorSpan && googleMapsErrorSpan.textContent === "This page can't load Google Maps correctly.") {
-        const errorContainer = googleMapsErrorSpan.closest("div[style*='position: absolute']");
-        if (errorContainer) {
-          errorContainer.remove();
-        }
-      }
+  // // Get rid of google overlays
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     // Locate and remove the first error message container
+  //     const googleMapsErrorSpan = document.querySelector("span[style='color: rgba(0, 0, 0, 0.87); font-size: 14px;']");
+  //     if (googleMapsErrorSpan && googleMapsErrorSpan.textContent === "This page can't load Google Maps correctly.") {
+  //       const errorContainer = googleMapsErrorSpan.closest("div[style*='position: absolute']");
+  //       if (errorContainer) {
+  //         errorContainer.remove();
+  //       }
+  //     }
 
-      // Locate and remove the "For development purposes only" overlay
-      const developmentOverlay = document.querySelector("div[style*='position: absolute'][style*='top: 50%'][style*='left: 50%']");
-      if (developmentOverlay && developmentOverlay.textContent.includes("For development purposes only")) {
-        developmentOverlay.remove();
-      }
+  //     // Locate and remove the "For development purposes only" overlay
+  //     const developmentOverlay = document.querySelector("div[style*='position: absolute'][style*='top: 50%'][style*='left: 50%']");
+  //     if (developmentOverlay && developmentOverlay.textContent.includes("For development purposes only")) {
+  //       developmentOverlay.remove();
+  //     }
 
-    }, 100);
+  //   }, 100);
 
-    return () => clearInterval(interval);
-  }, []);
+  //   return () => clearInterval(interval);
+  // }, []);
 
   // Reset the game and find a new Street View location
   const handleReset = () => {
