@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './Game.css';
+import locations from './world.js';
 
 const Game = () => {
   const streetViewRef = useRef(null);
@@ -7,7 +8,6 @@ const Game = () => {
   const fullScreenMapRef = useRef(null);
   const panoRef = useRef(null);
   const compassRef = useRef(null);
-  const [locations, setLocations] = useState(null); // List of possible generated locations
   const [actualLocation, setActualLocation] = useState(null); // Store the original location
   const [guessLocation, setGuessLocation] = useState(null); // Store the guessed location
   const [guessMarker, setGuessMarker] = useState(null); // Guess marker
@@ -68,23 +68,6 @@ const Game = () => {
     }
   }, [streetViewRef, panoRef.current]);
 
-
-  // Load the list of locations from the server (in this case, a JSON file)
-  useEffect(() => {
-    fetch('/world.json')
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        return response.json();
-      })
-      .then((data) => {
-        setLocations(data);
-      })
-      .catch((error) => {
-        console.error('There was a problem with the fetch operation:', error);
-      });
-  }, []);
 
   useEffect(() => {
     if (locations !== null && !isSubmitted) {
