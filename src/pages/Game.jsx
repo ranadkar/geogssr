@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./Game.css";
-import locations from "./one.js";
+import locations from "./world.js";
 
 const Game = () => {
   const streetViewRef = useRef(null);
