@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./Game.css";
-import locations from "./world.js";
+import locations from "./likeacw.js";
 
 const Game = () => {
   const streetViewRef = useRef(null);
@@ -28,16 +28,32 @@ const Game = () => {
     setActualLocation(coords);
     setPanoId(location.panoId);
 
-    // Initialize the Street View panorama using the panoId
+    // Initialize the Street View panorama using the panoId if available,
+    // otherwise fall back to position-based lookup
+    const panoOptions = {
+      position: coords,
+      disableDefaultUI: true,
+      showRoadLabels: false,
+    };
+    if (location.panoId) {
+      panoOptions.pano = location.panoId;
+    }
+
     const panorama = new window.google.maps.StreetViewPanorama(
       streetViewRef.current,
-      {
-        pano: location.panoId,
-        position: coords,
-        disableDefaultUI: true,
-        showRoadLabels: false,
-      }
+      panoOptions
     );
+
+    // If no panoId was provided, grab the resolved one from the panorama
+    if (!location.panoId) {
+      panorama.addListener("pano_changed", () => {
+        const resolvedPanoId = panorama.getPano();
+        if (resolvedPanoId) {
+          setPanoId(resolvedPanoId);
+        }
+      });
+    }
+
     panoRef.current = panorama;
 
     // Initialize the map with the new location
